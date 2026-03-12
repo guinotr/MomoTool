@@ -10,6 +10,10 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import sqlite3
 from contextlib import contextmanager
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
 APP_USERNAME = os.getenv("APP_USERNAME", "morgane")
