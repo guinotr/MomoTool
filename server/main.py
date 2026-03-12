@@ -44,17 +44,35 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
+        # Salons table
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS tasks (
+            CREATE TABLE IF NOT EXISTS salons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                salon_name TEXT NOT NULL,
-                task_name TEXT NOT NULL,
+                name TEXT NOT NULL,
+                year INTEGER NOT NULL,
                 description TEXT,
-                urls TEXT,
-                priority INTEGER NOT NULL DEFAULT 2,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Tasks table with hierarchy support
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                salon_id INTEGER NOT NULL,
+                parent_task_id INTEGER,
+                name TEXT NOT NULL,
+                description TEXT,
+                urls TEXT,
+                priority INTEGER NOT NULL DEFAULT 2,
+                deadline TIMESTAMP,
+                completed BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (salon_id) REFERENCES salons (id) ON DELETE CASCADE,
+                FOREIGN KEY (parent_task_id) REFERENCES tasks (id) ON DELETE CASCADE
+            )
+        """)
+
         conn.commit()
 
 # Models
@@ -65,20 +83,52 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     token: str
 
+# Salon models
+class SalonCreate(BaseModel):
+    name: str
+    year: int
+    description: Optional[str] = None
+
+class SalonUpdate(BaseModel):
+    name: Optional[str] = None
+    year: Optional[int] = None
+    description: Optional[str] = None
+
+class Salon(BaseModel):
+    id: int
+    name: str
+    year: int
+    description: Optional[str]
+    created_at: str
+
+# Task models
 class TaskCreate(BaseModel):
-    salon_name: str
-    task_name: str
+    salon_id: int
+    parent_task_id: Optional[int] = None
+    name: str
     description: Optional[str] = None
     urls: Optional[str] = None
     priority: int = 2
+    deadline: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    urls: Optional[str] = None
+    priority: Optional[int] = None
+    deadline: Optional[str] = None
+    completed: Optional[bool] = None
 
 class Task(BaseModel):
     id: int
-    salon_name: str
-    task_name: str
+    salon_id: int
+    parent_task_id: Optional[int]
+    name: str
     description: Optional[str]
     urls: Optional[str]
     priority: int
+    deadline: Optional[str]
+    completed: bool
     created_at: str
 
 # Auth functions
@@ -168,26 +218,166 @@ async def login(request: LoginRequest):
     token = create_token(request.username)
     return LoginResponse(token=token)
 
-@app.get("/api/tasks", response_model=list[Task])
-async def get_tasks(username: str = Depends(require_auth)):
-    """Get all tasks"""
+# Salon routes
+@app.get("/api/salons", response_model=list[Salon])
+async def get_salons(username: str = Depends(require_auth)):
+    """Get all salons"""
     with get_db() as conn:
         cursor = conn.execute("""
-            SELECT id, salon_name, task_name, description, urls, priority, created_at
-            FROM tasks
-            ORDER BY priority ASC, created_at DESC
+            SELECT id, name, year, description, created_at
+            FROM salons
+            ORDER BY year DESC, created_at DESC
         """)
+        rows = cursor.fetchall()
+
+        salons = []
+        for row in rows:
+            salons.append(Salon(
+                id=row["id"],
+                name=row["name"],
+                year=row["year"],
+                description=row["description"],
+                created_at=row["created_at"]
+            ))
+
+        return salons
+
+@app.post("/api/salons", response_model=Salon)
+async def create_salon(salon: SalonCreate, username: str = Depends(require_auth)):
+    """Create a new salon"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            INSERT INTO salons (name, year, description)
+            VALUES (?, ?, ?)
+        """, (salon.name, salon.year, salon.description))
+        conn.commit()
+
+        salon_id = cursor.lastrowid
+
+        cursor = conn.execute("""
+            SELECT id, name, year, description, created_at
+            FROM salons
+            WHERE id = ?
+        """, (salon_id,))
+        row = cursor.fetchone()
+
+        return Salon(
+            id=row["id"],
+            name=row["name"],
+            year=row["year"],
+            description=row["description"],
+            created_at=row["created_at"]
+        )
+
+@app.get("/api/salons/{salon_id}", response_model=Salon)
+async def get_salon(salon_id: int, username: str = Depends(require_auth)):
+    """Get a salon by ID"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, name, year, description, created_at
+            FROM salons
+            WHERE id = ?
+        """, (salon_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Salon not found"
+            )
+
+        return Salon(
+            id=row["id"],
+            name=row["name"],
+            year=row["year"],
+            description=row["description"],
+            created_at=row["created_at"]
+        )
+
+@app.patch("/api/salons/{salon_id}", response_model=Salon)
+async def update_salon(salon_id: int, salon: SalonUpdate, username: str = Depends(require_auth)):
+    """Update a salon"""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT id FROM salons WHERE id = ?", (salon_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Salon not found"
+            )
+
+        updates = []
+        values = []
+        if salon.name is not None:
+            updates.append("name = ?")
+            values.append(salon.name)
+        if salon.year is not None:
+            updates.append("year = ?")
+            values.append(salon.year)
+        if salon.description is not None:
+            updates.append("description = ?")
+            values.append(salon.description)
+
+        if updates:
+            values.append(salon_id)
+            conn.execute(f"UPDATE salons SET {', '.join(updates)} WHERE id = ?", values)
+            conn.commit()
+
+        cursor = conn.execute("""
+            SELECT id, name, year, description, created_at
+            FROM salons
+            WHERE id = ?
+        """, (salon_id,))
+        row = cursor.fetchone()
+
+        return Salon(
+            id=row["id"],
+            name=row["name"],
+            year=row["year"],
+            description=row["description"],
+            created_at=row["created_at"]
+        )
+
+@app.delete("/api/salons/{salon_id}")
+async def delete_salon(salon_id: int, username: str = Depends(require_auth)):
+    """Delete a salon"""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT id FROM salons WHERE id = ?", (salon_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Salon not found"
+            )
+
+        conn.execute("DELETE FROM salons WHERE id = ?", (salon_id,))
+        conn.commit()
+
+    return {"message": "Salon deleted"}
+
+# Task routes
+@app.get("/api/salons/{salon_id}/tasks", response_model=list[Task])
+async def get_salon_tasks(salon_id: int, username: str = Depends(require_auth)):
+    """Get all tasks for a salon"""
+    with get_db() as conn:
+        cursor = conn.execute("""
+            SELECT id, salon_id, parent_task_id, name, description, urls, priority, deadline, completed, created_at
+            FROM tasks
+            WHERE salon_id = ?
+            ORDER BY completed ASC, priority ASC, created_at DESC
+        """, (salon_id,))
         rows = cursor.fetchall()
 
         tasks = []
         for row in rows:
             tasks.append(Task(
                 id=row["id"],
-                salon_name=row["salon_name"],
-                task_name=row["task_name"],
+                salon_id=row["salon_id"],
+                parent_task_id=row["parent_task_id"],
+                name=row["name"],
                 description=row["description"],
                 urls=row["urls"],
                 priority=row["priority"],
+                deadline=row["deadline"],
+                completed=bool(row["completed"]),
                 created_at=row["created_at"]
             ))
 
@@ -198,15 +388,15 @@ async def create_task(task: TaskCreate, username: str = Depends(require_auth)):
     """Create a new task"""
     with get_db() as conn:
         cursor = conn.execute("""
-            INSERT INTO tasks (salon_name, task_name, description, urls, priority)
-            VALUES (?, ?, ?, ?, ?)
-        """, (task.salon_name, task.task_name, task.description, task.urls, task.priority))
+            INSERT INTO tasks (salon_id, parent_task_id, name, description, urls, priority, deadline)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (task.salon_id, task.parent_task_id, task.name, task.description, task.urls, task.priority, task.deadline))
         conn.commit()
 
         task_id = cursor.lastrowid
 
         cursor = conn.execute("""
-            SELECT id, salon_name, task_name, description, urls, priority, created_at
+            SELECT id, salon_id, parent_task_id, name, description, urls, priority, deadline, completed, created_at
             FROM tasks
             WHERE id = ?
         """, (task_id,))
@@ -214,11 +404,71 @@ async def create_task(task: TaskCreate, username: str = Depends(require_auth)):
 
         return Task(
             id=row["id"],
-            salon_name=row["salon_name"],
-            task_name=row["task_name"],
+            salon_id=row["salon_id"],
+            parent_task_id=row["parent_task_id"],
+            name=row["name"],
             description=row["description"],
             urls=row["urls"],
             priority=row["priority"],
+            deadline=row["deadline"],
+            completed=bool(row["completed"]),
+            created_at=row["created_at"]
+        )
+
+@app.patch("/api/tasks/{task_id}", response_model=Task)
+async def update_task(task_id: int, task: TaskUpdate, username: str = Depends(require_auth)):
+    """Update a task"""
+    with get_db() as conn:
+        cursor = conn.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+        if not cursor.fetchone():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found"
+            )
+
+        updates = []
+        values = []
+        if task.name is not None:
+            updates.append("name = ?")
+            values.append(task.name)
+        if task.description is not None:
+            updates.append("description = ?")
+            values.append(task.description)
+        if task.urls is not None:
+            updates.append("urls = ?")
+            values.append(task.urls)
+        if task.priority is not None:
+            updates.append("priority = ?")
+            values.append(task.priority)
+        if task.deadline is not None:
+            updates.append("deadline = ?")
+            values.append(task.deadline)
+        if task.completed is not None:
+            updates.append("completed = ?")
+            values.append(1 if task.completed else 0)
+
+        if updates:
+            values.append(task_id)
+            conn.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", values)
+            conn.commit()
+
+        cursor = conn.execute("""
+            SELECT id, salon_id, parent_task_id, name, description, urls, priority, deadline, completed, created_at
+            FROM tasks
+            WHERE id = ?
+        """, (task_id,))
+        row = cursor.fetchone()
+
+        return Task(
+            id=row["id"],
+            salon_id=row["salon_id"],
+            parent_task_id=row["parent_task_id"],
+            name=row["name"],
+            description=row["description"],
+            urls=row["urls"],
+            priority=row["priority"],
+            deadline=row["deadline"],
+            completed=bool(row["completed"]),
             created_at=row["created_at"]
         )
 
