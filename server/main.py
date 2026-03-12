@@ -84,26 +84,53 @@ class Task(BaseModel):
 # Auth functions
 def create_token(username: str) -> str:
     """Create a simple token (username:timestamp:signature)"""
+    import hashlib
+    import hmac
+
     timestamp = datetime.utcnow().isoformat()
     data = f"{username}:{timestamp}"
-    signature = secrets.token_urlsafe(32)
+    # Create HMAC signature using JWT_SECRET
+    signature = hmac.new(
+        JWT_SECRET.encode(),
+        data.encode(),
+        hashlib.sha256
+    ).hexdigest()
     return f"{data}:{signature}"
 
 def verify_token(token: str) -> Optional[str]:
     """Verify token and return username if valid"""
+    import hashlib
+    import hmac
+
     try:
         parts = token.split(":")
         if len(parts) != 3:
+            print(f"[AUTH] Invalid token format: {len(parts)} parts")
             return None
         username, timestamp, signature = parts
+
+        # Verify signature
+        data = f"{username}:{timestamp}"
+        expected_signature = hmac.new(
+            JWT_SECRET.encode(),
+            data.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_signature):
+            print(f"[AUTH] Invalid signature")
+            return None
 
         # Check if token is not too old (7 days)
         token_time = datetime.fromisoformat(timestamp)
         if datetime.utcnow() - token_time > timedelta(days=7):
+            print(f"[AUTH] Token expired")
             return None
 
+        print(f"[AUTH] Token valid for user: {username}")
         return username
-    except Exception:
+    except Exception as e:
+        print(f"[AUTH] Token verification error: {e}")
         return None
 
 def require_auth(credentials: HTTPAuthorizationCredentials = Depends(bearer_security)) -> str:
