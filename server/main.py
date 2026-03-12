@@ -83,19 +83,19 @@ class Task(BaseModel):
 
 # Auth functions
 def create_token(username: str) -> str:
-    """Create a simple token (username:timestamp:signature)"""
+    """Create a simple token (username|timestamp|signature)"""
     import hashlib
     import hmac
 
     timestamp = datetime.utcnow().isoformat()
-    data = f"{username}:{timestamp}"
+    data = f"{username}|{timestamp}"
     # Create HMAC signature using JWT_SECRET
     signature = hmac.new(
         JWT_SECRET.encode(),
         data.encode(),
         hashlib.sha256
     ).hexdigest()
-    return f"{data}:{signature}"
+    return f"{data}|{signature}"
 
 def verify_token(token: str) -> Optional[str]:
     """Verify token and return username if valid"""
@@ -103,14 +103,14 @@ def verify_token(token: str) -> Optional[str]:
     import hmac
 
     try:
-        parts = token.split(":")
+        parts = token.split("|")
         if len(parts) != 3:
             print(f"[AUTH] Invalid token format: {len(parts)} parts")
             return None
         username, timestamp, signature = parts
 
         # Verify signature
-        data = f"{username}:{timestamp}"
+        data = f"{username}|{timestamp}"
         expected_signature = hmac.new(
             JWT_SECRET.encode(),
             data.encode(),
