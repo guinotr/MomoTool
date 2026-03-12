@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Event Task Manager - Morgane</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
+
+      :root {
+        color-scheme: light;
+        --bg: #f5f2ea;
+        --panel: rgba(255, 255, 255, 0.92);
+        --ink: #1d1e20;
+        --muted: #5f6368;
+        --line: #e3dfd3;
+        --accent: #0f7a75;
+        --accent-2: #0f4b7a;
+        --shadow: 0 24px 50px rgba(17, 24, 39, 0.08);
+        --priority-1: #dc2626;
+        --priority-2: #f59e0b;
+        --priority-3: #10b981;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 10%, #fff6db 0%, transparent 45%),
+          radial-gradient(circle at 90% 0%, #e0f0ff 0%, transparent 45%),
+          var(--bg);
+      }
+
+      .login-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .login-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 40px;
+        box-shadow: var(--shadow);
+        max-width: 400px;
+        width: 100%;
+      }
+
+      .login-card h1 {
+        margin: 0 0 10px;
+        font-size: 28px;
+      }
+
+      .login-card p {
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      input, textarea, select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-family: inherit;
+        font-size: 14px;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: linear-gradient(130deg, #0f7a75, #0f4b7a);
+        color: white;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 12px 30px rgba(15, 122, 117, 0.2);
+        font-family: inherit;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--ink);
+        box-shadow: none;
+      }
+
+      button.danger {
+        background: linear-gradient(130deg, #dc2626, #b91c1c);
+        box-shadow: 0 12px 30px rgba(220, 38, 38, 0.2);
+      }
+
+      .error {
+        color: #dc2626;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 48px 20px 72px;
+      }
+
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      h1 {
+        font-size: clamp(28px, 3vw, 42px);
+        margin: 0 0 8px;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        margin-bottom: 24px;
+      }
+
+      .card h2 {
+        margin: 0 0 20px;
+        font-size: 20px;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .table-container {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      th {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .priority-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .priority-1 {
+        background: #fee2e2;
+        color: var(--priority-1);
+      }
+
+      .priority-2 {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .priority-3 {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      .task-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-small {
+        padding: 4px 12px;
+        font-size: 12px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .url-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .url-list li {
+        margin-bottom: 4px;
+      }
+
+      .url-list a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .url-list a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 720px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+      <div class="login-card">
+        <h1>Event Task Manager</h1>
+        <p>Connecte-toi pour accéder à tes tâches</p>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Identifiant</label>
+            <input type="text" id="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Code d'accès</label>
+            <input type="password" id="password" required />
+          </div>
+          <div class="error hidden" id="loginError"></div>
+          <button type="submit" style="width: 100%; margin-top: 16px;">Se connecter</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appPage" class="page hidden">
+      <header class="hero">
+        <div>
+          <h1>Gestion des tâches par salon</h1>
+          <p class="subtitle">Organise tes événements et tâches</p>
+        </div>
+        <div class="actions">
+          <button id="logoutBtn" class="secondary">Déconnexion</button>
+        </div>
+      </header>
+
+      <!-- New Task Form -->
+      <section class="card">
+        <h2>Ajouter une tâche</h2>
+        <form id="taskForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="salonName">Nom du salon *</label>
+              <input type="text" id="salonName" required />
+            </div>
+            <div class="form-group">
+              <label for="taskName">Nom de la tâche *</label>
+              <input type="text" id="taskName" required />
+            </div>
+            <div class="form-group">
+              <label for="priority">Priorité *</label>
+              <select id="priority" required>
+                <option value="1">1 - Urgent</option>
+                <option value="2" selected>2 - Normal</option>
+                <option value="3">3 - Faible</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="urls">URLs (une par ligne)</label>
+            <textarea id="urls" placeholder="https://example.com&#10;https://another-link.com"></textarea>
+          </div>
+          <button type="submit">Ajouter la tâche</button>
+        </form>
+      </section>
+
+      <!-- Tasks List -->
+      <section class="card">
+        <h2>Mes tâches</h2>
+        <div class="form-group" style="max-width: 300px; margin-bottom: 16px;">
+          <label for="filterSalon">Filtrer par salon</label>
+          <select id="filterSalon">
+            <option value="">Tous les salons</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Salon</th>
+                <th>Tâche</th>
+                <th>Description</th>
+                <th>URLs</th>
+                <th>Priorité</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tasksTable">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--muted);">Aucune tâche pour le moment</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // State
+      let authToken = localStorage.getItem('authToken');
+      let tasks = [];
+
+      // Elements
+      const loginPage = document.getElementById('loginPage');
+      const appPage = document.getElementById('appPage');
+      const loginForm = document.getElementById('loginForm');
+      const loginError = document.getElementById('loginError');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const taskForm = document.getElementById('taskForm');
+      const tasksTable = document.getElementById('tasksTable');
+      const filterSalon = document.getElementById('filterSalon');
+
+      // Auth functions
+      function showLogin() {
+        loginPage.classList.remove('hidden');
+        appPage.classList.add('hidden');
+      }
+
+      function showApp() {
+        loginPage.classList.add('hidden');
+        appPage.classList.remove('hidden');
+        loadTasks();
+      }
+
+      async function login(username, password) {
+        try {
+          const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          if (!response.ok) {
+            throw new Error('Identifiant ou mot de passe incorrect');
+          }
+
+          const data = await response.json();
+          authToken = data.token;
+          localStorage.setItem('authToken', authToken);
+          showApp();
+        } catch (error) {
+          loginError.textContent = error.message;
+          loginError.classList.remove('hidden');
+        }
+      }
+
+      function logout() {
+        authToken = null;
+        localStorage.removeItem('authToken');
+        showLogin();
+      }
+
+      // Task functions
+      async function loadTasks() {
+        try {
+          const response = await fetch('/api/tasks', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+
+          if (response.status === 401) {
+            logout();
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Erreur lors du chargement des tâches');
+          }
+
+          tasks = await response.json();
+          renderTasks();
+          updateSalonFilter();
+        } catch (error) {
+          console.error('Error loading tasks:', error);
+        }
+      }
+
+      function updateSalonFilter() {
+        const salons = [...new Set(tasks.map(t => t.salon_name))].sort();
+        const currentValue = filterSalon.value;
+
+        filterSalon.innerHTML = '<option value="">Tous les salons</option>';
+        salons.forEach(salon => {
+          const option = document.createElement('option');
+          option.value = salon;
+          option.textContent = salon;
+          filterSalon.appendChild(option);
+        });
+
+        filterSalon.value = currentValue;
+      }
+
+      function renderTasks() {
+        const filterValue = filterSalon.value.toLowerCase();
+        const filteredTasks = filterValue
+          ? tasks.filter(t => t.salon_name.toLowerCase() === filterValue)
+          : tasks;
+
+        if (filteredTasks.length === 0) {
+          tasksTable.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted);">Aucune tâche pour le moment</td></tr>';
+          return;
+        }
+
+        tasksTable.innerHTML = filteredTasks.map(task => {
+          const urls = task.urls ? task.urls.split('\n').filter(u => u.trim()) : [];
+          const urlsHtml = urls.length > 0
+            ? '<ul class="url-list">' + urls.map(url =>
+                `<li><a href="${url.trim()}" target="_blank">${url.trim()}</a></li>`
+              ).join('') + '</ul>'
+            : '--';
+
+          return `
+            <tr>
+              <td><strong>${task.salon_name}</strong></td>
+              <td>${task.task_name}</td>
+              <td>${task.description || '--'}</td>
+              <td>${urlsHtml}</td>
+              <td><span class="priority-badge priority-${task.priority}">Priorité ${task.priority}</span></td>
+              <td>
+                <div class="task-actions">
+                  <button class="secondary btn-small" onclick="deleteTask(${task.id})">Supprimer</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      async function addTask(taskData) {
+        try {
+          const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(taskData)
+          });
+
+          if (response.status === 401) {
+            logout();
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Erreur lors de l\'ajout de la tâche');
+          }
+
+          await loadTasks();
+          taskForm.reset();
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+
+      async function deleteTask(taskId) {
+        if (!confirm('Supprimer cette tâche ?')) return;
+
+        try {
+          const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+
+          if (response.status === 401) {
+            logout();
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Erreur lors de la suppression');
+          }
+
+          await loadTasks();
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+
+      // Event listeners
+      loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        login(username, password);
+      });
+
+      logoutBtn.addEventListener('click', logout);
+
+      taskForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const taskData = {
+          salon_name: document.getElementById('salonName').value,
+          task_name: document.getElementById('taskName').value,
+          description: document.getElementById('description').value || null,
+          urls: document.getElementById('urls').value || null,
+          priority: parseInt(document.getElementById('priority').value)
+        };
+        addTask(taskData);
+      });
+
+      filterSalon.addEventListener('change', renderTasks);
+
+      // Initialize
+      if (authToken) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    </script>
+  </body>
+</html>
