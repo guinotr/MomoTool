@@ -236,7 +236,7 @@
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 16px;
+        padding: 20px;
         position: relative;
       }
 
@@ -261,24 +261,50 @@
       .task-header {
         display: flex;
         align-items: flex-start;
-        gap: 12px;
+        gap: 16px;
       }
 
       .task-checkbox {
         margin-top: 4px;
         cursor: pointer;
         flex-shrink: 0;
+        width: 18px;
+        height: 18px;
       }
 
       .task-content {
         flex: 1;
         min-width: 0;
+        width: 100%;
+      }
+
+      .task-main {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .task-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
       }
 
       .task-name {
         font-weight: 600;
-        margin-bottom: 4px;
+        font-size: 16px;
+        margin-bottom: 0;
         word-wrap: break-word;
+        cursor: pointer;
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .task-name:hover {
+        color: var(--accent);
       }
 
       .task-name.completed {
@@ -287,11 +313,38 @@
 
       .task-meta {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
-        align-items: flex-end;
-        font-size: 12px;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+      }
+
+      .task-description {
         color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+        margin-top: 8px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .task-urls {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .task-url-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 13px;
+        word-break: break-all;
+        display: inline-block;
+      }
+
+      .task-url-link:hover {
+        text-decoration: underline;
       }
 
       .priority-badge {
@@ -361,10 +414,16 @@
 
       /* Dashboard Stats */
       .dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        margin-bottom: 32px;
+      }
+
+      .dashboard-overview {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 16px;
-        margin-bottom: 32px;
       }
 
       .stat-card {
@@ -394,6 +453,89 @@
       .stat-label {
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .dashboard-salons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .dashboard-salons h3 {
+        font-size: 18px;
+        margin: 0 0 12px;
+      }
+
+      .salon-stat-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: var(--shadow);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .salon-stat-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .salon-stat-card.has-urgent {
+        border-left: 4px solid var(--priority-1);
+        background: var(--alert-urgent);
+      }
+
+      .salon-stat-card.has-upcoming {
+        border-left: 4px solid var(--priority-2);
+        background: var(--alert-soon);
+      }
+
+      .salon-stat-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .salon-stat-name {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+
+      .salon-stat-year {
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .salon-stat-badges {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .salon-stat-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .salon-stat-badge.urgent {
+        background: #fee2e2;
+        color: var(--priority-1);
+      }
+
+      .salon-stat-badge.upcoming {
+        background: #fef3c7;
+        color: #d97706;
       }
 
       @media (max-width: 720px) {

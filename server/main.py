@@ -493,6 +493,8 @@ async def delete_task(task_id: int, username: str = Depends(require_auth)):
 async def get_stats(username: str = Depends(require_auth)):
     """Get global statistics"""
     with get_db() as conn:
+        from datetime import datetime, timedelta
+
         # Total salons
         cursor = conn.execute("SELECT COUNT(*) as count FROM salons")
         total_salons = cursor.fetchone()["count"]
@@ -506,7 +508,6 @@ async def get_stats(username: str = Depends(require_auth)):
         incomplete_tasks = cursor.fetchone()["count"]
 
         # Tasks due within 7 days
-        from datetime import datetime, timedelta
         seven_days_later = (datetime.now() + timedelta(days=7)).isoformat()
         cursor = conn.execute("""
             SELECT COUNT(*) as count
@@ -528,12 +529,41 @@ async def get_stats(username: str = Depends(require_auth)):
         """, (tomorrow,))
         urgent_tasks = cursor.fetchone()["count"]
 
+        # Stats per salon
+        cursor = conn.execute("""
+            SELECT
+                s.id,
+                s.name,
+                s.year,
+                COUNT(t.id) as total_tasks,
+                SUM(CASE WHEN t.completed = 0 THEN 1 ELSE 0 END) as incomplete_tasks,
+                SUM(CASE WHEN t.completed = 0 AND t.deadline IS NOT NULL AND t.deadline <= ? THEN 1 ELSE 0 END) as urgent_tasks,
+                SUM(CASE WHEN t.completed = 0 AND t.deadline IS NOT NULL AND t.deadline <= ? THEN 1 ELSE 0 END) as upcoming_tasks
+            FROM salons s
+            LEFT JOIN tasks t ON s.id = t.salon_id
+            GROUP BY s.id, s.name, s.year
+            ORDER BY s.year DESC, s.created_at DESC
+        """, (tomorrow, seven_days_later))
+
+        salon_stats = []
+        for row in cursor.fetchall():
+            salon_stats.append({
+                "id": row["id"],
+                "name": row["name"],
+                "year": row["year"],
+                "total_tasks": row["total_tasks"] or 0,
+                "incomplete_tasks": row["incomplete_tasks"] or 0,
+                "urgent_tasks": row["urgent_tasks"] or 0,
+                "upcoming_tasks": row["upcoming_tasks"] or 0
+            })
+
         return {
             "total_salons": total_salons,
             "total_tasks": total_tasks,
             "incomplete_tasks": incomplete_tasks,
             "upcoming_deadlines": upcoming_deadlines,
-            "urgent_tasks": urgent_tasks
+            "urgent_tasks": urgent_tasks,
+            "salons": salon_stats
         }
 
 # Static files

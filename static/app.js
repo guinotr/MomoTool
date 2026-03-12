@@ -189,32 +189,61 @@ function renderDashboard(stats) {
     return;
   }
 
-  container.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-value">${stats.total_salons}</div>
-      <div class="stat-label">Salons</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">${stats.total_tasks}</div>
-      <div class="stat-label">Tâches totales</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">${stats.incomplete_tasks}</div>
-      <div class="stat-label">Tâches en cours</div>
-    </div>
-    ${stats.urgent_tasks > 0 ? `
-      <div class="stat-card urgent">
-        <div class="stat-value">${stats.urgent_tasks}</div>
-        <div class="stat-label">Tâches urgentes</div>
+  const overviewHTML = `
+    <div class="dashboard-overview">
+      <div class="stat-card">
+        <div class="stat-value">${stats.total_salons}</div>
+        <div class="stat-label">Salons</div>
       </div>
-    ` : ''}
-    ${stats.upcoming_deadlines > 0 ? `
-      <div class="stat-card warning">
-        <div class="stat-value">${stats.upcoming_deadlines}</div>
-        <div class="stat-label">Échéances (7 jours)</div>
+      <div class="stat-card">
+        <div class="stat-value">${stats.total_tasks}</div>
+        <div class="stat-label">Tâches totales</div>
       </div>
-    ` : ''}
+      <div class="stat-card">
+        <div class="stat-value">${stats.incomplete_tasks}</div>
+        <div class="stat-label">Tâches en cours</div>
+      </div>
+      ${stats.urgent_tasks > 0 ? `
+        <div class="stat-card urgent">
+          <div class="stat-value">${stats.urgent_tasks}</div>
+          <div class="stat-label">Tâches urgentes</div>
+        </div>
+      ` : ''}
+      ${stats.upcoming_deadlines > 0 ? `
+        <div class="stat-card warning">
+          <div class="stat-value">${stats.upcoming_deadlines}</div>
+          <div class="stat-label">Échéances (7 jours)</div>
+        </div>
+      ` : ''}
+    </div>
   `;
+
+  const salonsHTML = stats.salons && stats.salons.length > 0 ? `
+    <div class="dashboard-salons">
+      <h3>Aperçu par salon</h3>
+      ${stats.salons.map(salon => {
+        const hasUrgent = salon.urgent_tasks > 0;
+        const hasUpcoming = !hasUrgent && salon.upcoming_tasks > 0;
+        const cardClass = hasUrgent ? 'has-urgent' : hasUpcoming ? 'has-upcoming' : '';
+
+        return `
+          <div class="salon-stat-card ${cardClass}" onclick="showSalonDetailPage(${salon.id})">
+            <div class="salon-stat-info">
+              <div class="salon-stat-name">${salon.name}</div>
+              <div class="salon-stat-year">${salon.year}</div>
+            </div>
+            <div class="salon-stat-badges">
+              ${salon.incomplete_tasks > 0 ? `<span class="salon-stat-badge">${salon.incomplete_tasks} en cours</span>` : ''}
+              ${salon.urgent_tasks > 0 ? `<span class="salon-stat-badge urgent">${salon.urgent_tasks} urgent${salon.urgent_tasks > 1 ? 's' : ''}</span>` : ''}
+              ${salon.upcoming_tasks > 0 && salon.urgent_tasks === 0 ? `<span class="salon-stat-badge upcoming">${salon.upcoming_tasks} à venir</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  ` : '';
+
+  container.innerHTML = overviewHTML + salonsHTML;
 }
 
 function renderSalons() {
@@ -286,23 +315,23 @@ function renderTasks() {
         <div class="task-header">
           <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
                  onchange="toggleTaskComplete(${task.id}, this.checked)">
-          <div class="task-content" style="flex: 1; min-width: 0;">
-            <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 200px;">
-                <div class="task-name ${task.completed ? 'completed' : ''}" onclick="showTaskFormPage(${task.id})" style="cursor: pointer;">
+          <div class="task-content">
+            <div class="task-main">
+              <div class="task-title-row">
+                <div class="task-name ${task.completed ? 'completed' : ''}" onclick="showTaskFormPage(${task.id})">
                   ${task.name}
                 </div>
-                ${task.description ? `<div style="color: var(--muted); font-size: 13px; margin-top: 6px;">${task.description}</div>` : ''}
-                ${task.urls ? `<div style="margin-top: 8px; font-size: 12px; word-break: break-all;">
-                  ${task.urls.split('\n').filter(u => u.trim()).map(url =>
-                    `<a href="${url.trim()}" target="_blank" style="color: var(--accent); margin-right: 12px; display: inline-block; margin-bottom: 4px;">${url.trim()}</a>`
-                  ).join('')}
-                </div>` : ''}
+                <div class="task-meta">
+                  <span class="priority-badge priority-${task.priority}">Priorité ${task.priority}</span>
+                  ${task.deadline ? `<span class="deadline-badge">${formatDeadline(task.deadline)}</span>` : ''}
+                </div>
               </div>
-              <div class="task-meta" style="flex-shrink: 0;">
-                <span class="priority-badge priority-${task.priority}">Priorité ${task.priority}</span>
-                ${task.deadline ? `<span class="deadline-badge" style="display: block; margin-top: 4px; white-space: nowrap;">${formatDeadline(task.deadline)}</span>` : ''}
-              </div>
+              ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+              ${task.urls ? `<div class="task-urls">
+                ${task.urls.split('\n').filter(u => u.trim()).map(url =>
+                  `<a href="${url.trim()}" target="_blank" class="task-url-link">${url.trim()}</a>`
+                ).join('')}
+              </div>` : ''}
             </div>
           </div>
         </div>
@@ -311,17 +340,22 @@ function renderTasks() {
           <div class="subtasks">
             ${subtasks.map(subtask => `
               <div class="subtask-item ${subtask.completed ? 'completed' : ''}">
-                <div style="display: flex; gap: 8px; align-items: start;">
+                <div style="display: flex; gap: 12px; align-items: start;">
                   <input type="checkbox" ${subtask.completed ? 'checked' : ''}
                          onchange="toggleTaskComplete(${subtask.id}, this.checked)"
-                         style="margin-top: 2px;">
-                  <div style="flex: 1;">
-                    <div style="font-weight: 500; ${subtask.completed ? 'text-decoration: line-through;' : ''}"
-                         onclick="showTaskFormPage(${subtask.id})" style="cursor: pointer;">
+                         style="margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px;">
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 500; font-size: 14px; ${subtask.completed ? 'text-decoration: line-through;' : ''}"
+                         onclick="showTaskFormPage(${subtask.id})" style="cursor: pointer; margin-bottom: 4px;">
                       ${subtask.name}
                     </div>
-                    ${subtask.description ? `<div style="color: var(--muted); font-size: 11px; margin-top: 2px;">${subtask.description}</div>` : ''}
-                    ${subtask.deadline ? `<div style="font-size: 10px; margin-top: 4px;">${formatDeadline(subtask.deadline)}</div>` : ''}
+                    ${subtask.description ? `<div style="color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.5; white-space: pre-wrap;">${subtask.description}</div>` : ''}
+                    ${subtask.urls ? `<div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+                      ${subtask.urls.split('\n').filter(u => u.trim()).map(url =>
+                        `<a href="${url.trim()}" target="_blank" class="task-url-link">${url.trim()}</a>`
+                      ).join('')}
+                    </div>` : ''}
+                    ${subtask.deadline ? `<div style="font-size: 11px; margin-top: 8px; color: var(--muted);">${formatDeadline(subtask.deadline)}</div>` : ''}
                   </div>
                 </div>
               </div>
