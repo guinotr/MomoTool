@@ -21,6 +21,11 @@ APP_PASSWORD = os.getenv("APP_PASSWORD", "changeme")
 JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
 DB_PATH = os.getenv("DB_PATH", "tasks.db")
 
+# Debug: print config on startup
+print(f"[CONFIG] APP_USERNAME: {APP_USERNAME}")
+print(f"[CONFIG] JWT_SECRET length: {len(JWT_SECRET) if JWT_SECRET else 'None'}")
+print(f"[CONFIG] DB_PATH: {DB_PATH}")
+
 app = FastAPI(title="Event Task Manager")
 
 # Security
