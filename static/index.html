@@ -359,6 +359,43 @@
         color: var(--muted);
       }
 
+      /* Dashboard Stats */
+      .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+
+      .stat-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .stat-card.urgent {
+        border-left: 4px solid var(--priority-1);
+        background: var(--alert-urgent);
+      }
+
+      .stat-card.warning {
+        border-left: 4px solid var(--priority-2);
+        background: var(--alert-soon);
+      }
+
+      .stat-value {
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
       @media (max-width: 720px) {
         .salon-grid {
           grid-template-columns: 1fr;
@@ -399,6 +436,9 @@
           <button id="logoutBtn" class="secondary">Déconnexion</button>
         </div>
       </header>
+
+      <!-- Dashboard Stats -->
+      <div id="dashboard" class="dashboard"></div>
 
       <div id="salonsList" class="salon-grid"></div>
     </div>

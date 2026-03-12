@@ -488,6 +488,54 @@ async def delete_task(task_id: int, username: str = Depends(require_auth)):
 
     return {"message": "Task deleted"}
 
+# Stats route
+@app.get("/api/stats")
+async def get_stats(username: str = Depends(require_auth)):
+    """Get global statistics"""
+    with get_db() as conn:
+        # Total salons
+        cursor = conn.execute("SELECT COUNT(*) as count FROM salons")
+        total_salons = cursor.fetchone()["count"]
+
+        # Total tasks
+        cursor = conn.execute("SELECT COUNT(*) as count FROM tasks")
+        total_tasks = cursor.fetchone()["count"]
+
+        # Incomplete tasks
+        cursor = conn.execute("SELECT COUNT(*) as count FROM tasks WHERE completed = 0")
+        incomplete_tasks = cursor.fetchone()["count"]
+
+        # Tasks due within 7 days
+        from datetime import datetime, timedelta
+        seven_days_later = (datetime.now() + timedelta(days=7)).isoformat()
+        cursor = conn.execute("""
+            SELECT COUNT(*) as count
+            FROM tasks
+            WHERE completed = 0
+            AND deadline IS NOT NULL
+            AND deadline <= ?
+        """, (seven_days_later,))
+        upcoming_deadlines = cursor.fetchone()["count"]
+
+        # Urgent tasks (passed deadline or due today/tomorrow)
+        tomorrow = (datetime.now() + timedelta(days=1)).isoformat()
+        cursor = conn.execute("""
+            SELECT COUNT(*) as count
+            FROM tasks
+            WHERE completed = 0
+            AND deadline IS NOT NULL
+            AND deadline <= ?
+        """, (tomorrow,))
+        urgent_tasks = cursor.fetchone()["count"]
+
+        return {
+            "total_salons": total_salons,
+            "total_tasks": total_tasks,
+            "incomplete_tasks": incomplete_tasks,
+            "upcoming_deadlines": upcoming_deadlines,
+            "urgent_tasks": urgent_tasks
+        }
+
 # Static files
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 

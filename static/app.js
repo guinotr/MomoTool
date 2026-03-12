@@ -75,6 +75,8 @@ async function showSalonsPage() {
   hideAllPages();
   document.getElementById('salonsPage').classList.remove('hidden');
   await loadSalons();
+  const stats = await loadStats();
+  renderDashboard(stats);
   renderSalons();
 }
 
@@ -160,6 +162,15 @@ async function loadSalons() {
   }
 }
 
+async function loadStats() {
+  try {
+    return await apiRequest('/api/stats');
+  } catch (error) {
+    console.error('Error loading stats:', error);
+    return null;
+  }
+}
+
 async function loadSalonTasks(salonId) {
   try {
     tasks = await apiRequest(`/api/salons/${salonId}/tasks`);
@@ -170,6 +181,42 @@ async function loadSalonTasks(salonId) {
 }
 
 // Rendering
+function renderDashboard(stats) {
+  const container = document.getElementById('dashboard');
+
+  if (!stats) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-value">${stats.total_salons}</div>
+      <div class="stat-label">Salons</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${stats.total_tasks}</div>
+      <div class="stat-label">Tâches totales</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">${stats.incomplete_tasks}</div>
+      <div class="stat-label">Tâches en cours</div>
+    </div>
+    ${stats.urgent_tasks > 0 ? `
+      <div class="stat-card urgent">
+        <div class="stat-value">${stats.urgent_tasks}</div>
+        <div class="stat-label">Tâches urgentes</div>
+      </div>
+    ` : ''}
+    ${stats.upcoming_deadlines > 0 ? `
+      <div class="stat-card warning">
+        <div class="stat-value">${stats.upcoming_deadlines}</div>
+        <div class="stat-label">Échéances (7 jours)</div>
+      </div>
+    ` : ''}
+  `;
+}
+
 function renderSalons() {
   const container = document.getElementById('salonsList');
 
