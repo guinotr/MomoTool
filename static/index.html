@@ -383,10 +383,10 @@
         appPage.classList.add('hidden');
       }
 
-      function showApp() {
+      async function showApp() {
         loginPage.classList.add('hidden');
         appPage.classList.remove('hidden');
-        loadTasks();
+        await loadTasks();
       }
 
       async function login(username, password) {
@@ -569,11 +569,33 @@
       filterSalon.addEventListener('change', renderTasks);
 
       // Initialize
-      if (authToken) {
-        showApp();
-      } else {
-        showLogin();
+      async function init() {
+        if (authToken) {
+          // Verify token is valid by trying to load tasks
+          try {
+            const response = await fetch('/api/tasks', {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+
+            if (response.ok) {
+              showApp();
+            } else {
+              // Token invalid, clear and show login
+              localStorage.removeItem('authToken');
+              authToken = null;
+              showLogin();
+            }
+          } catch (error) {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            showLogin();
+          }
+        } else {
+          showLogin();
+        }
       }
+
+      init();
     </script>
   </body>
 </html>
