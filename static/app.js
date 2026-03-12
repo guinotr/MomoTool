@@ -4,6 +4,7 @@ let currentSalon = null;
 let currentTask = null;
 let salons = [];
 let tasks = [];
+let currentTaskSort = 'default';
 
 // API helpers
 async function apiRequest(url, options = {}) {
@@ -89,6 +90,11 @@ async function showSalonDetailPage(salonId) {
   document.getElementById('currentSalonName').textContent = currentSalon.name;
   document.getElementById('salonTitle').textContent = currentSalon.name;
   document.getElementById('salonSubtitle').textContent = `Année ${currentSalon.year}${currentSalon.description ? ' - ' + currentSalon.description : ''}`;
+
+  // Reset sort to default
+  currentTaskSort = 'default';
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.sort-btn[data-sort="default"]')?.classList.add('active');
 
   await loadSalonTasks(salonId);
   renderTasks();
@@ -203,6 +209,10 @@ function renderDashboard(stats) {
         <div class="stat-value">${stats.incomplete_tasks}</div>
         <div class="stat-label">Tâches en cours</div>
       </div>
+      <div class="stat-card">
+        <div class="stat-value">${stats.completed_tasks || 0}</div>
+        <div class="stat-label">Tâches terminées</div>
+      </div>
       ${stats.urgent_tasks > 0 ? `
         <div class="stat-card urgent">
           <div class="stat-value">${stats.urgent_tasks}</div>
@@ -249,18 +259,8 @@ function renderDashboard(stats) {
 function renderSalons() {
   const container = document.getElementById('salonsList');
 
-  if (salons.length === 0) {
-    container.innerHTML = '<p style="text-align: center; color: var(--muted); padding: 40px;">Aucun salon. Créez-en un pour commencer !</p>';
-    return;
-  }
-
-  container.innerHTML = salons.map(salon => `
-    <div class="salon-card" onclick="showSalonDetailPage(${salon.id})">
-      <div class="salon-year">${salon.year}</div>
-      <div class="salon-name">${salon.name}</div>
-      ${salon.description ? `<div class="salon-desc">${salon.description}</div>` : ''}
-    </div>
-  `).join('');
+  // Ne rien afficher - les salons sont déjà dans le dashboard
+  container.innerHTML = '';
 }
 
 function calculateDeadlineAlert(deadline) {
@@ -294,16 +294,48 @@ function formatDeadline(deadline) {
   return `📅 ${deadlineDate.toLocaleDateString('fr-FR')}`;
 }
 
+function sortTasks(tasksList, sortType) {
+  const sorted = [...tasksList];
+
+  if (sortType === 'deadline') {
+    // Sort by deadline: tasks with deadlines first, then by date (earliest first), then without deadlines
+    sorted.sort((a, b) => {
+      if (a.deadline && !b.deadline) return -1;
+      if (!a.deadline && b.deadline) return 1;
+      if (a.deadline && b.deadline) {
+        return new Date(a.deadline) - new Date(b.deadline);
+      }
+      return 0;
+    });
+  } else if (sortType === 'priority') {
+    // Sort by priority (1 = highest priority)
+    sorted.sort((a, b) => a.priority - b.priority);
+  }
+  // For 'default', keep original order (by creation date DESC from API)
+
+  return sorted;
+}
+
 function renderTasks() {
   const container = document.getElementById('tasksList');
 
   // Organize tasks: top-level tasks with their subtasks
-  const topLevelTasks = tasks.filter(t => !t.parent_task_id);
+  let topLevelTasks = tasks.filter(t => !t.parent_task_id);
 
   if (topLevelTasks.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--muted); padding: 40px;">Aucune tâche. Créez-en une pour commencer !</p>';
     return;
   }
+
+  // Separate completed and incomplete tasks
+  const incompleteTasks = topLevelTasks.filter(t => !t.completed);
+  const completedTasks = topLevelTasks.filter(t => t.completed);
+
+  // Sort incomplete tasks according to current sort
+  const sortedIncompleteTasks = sortTasks(incompleteTasks, currentTaskSort);
+
+  // Combine: incomplete first, then completed at the bottom
+  topLevelTasks = [...sortedIncompleteTasks, ...completedTasks];
 
   container.innerHTML = topLevelTasks.map(task => {
     const subtasks = tasks.filter(t => t.parent_task_id === task.id);
@@ -511,6 +543,21 @@ document.getElementById('backToSalonFromTask').addEventListener('click', (e) => 
 document.getElementById('cancelTaskFormBtn').addEventListener('click', () => showSalonDetailPage(currentSalon.id));
 document.getElementById('taskForm').addEventListener('submit', createOrUpdateTask);
 document.getElementById('deleteTaskBtn').addEventListener('click', deleteTask);
+
+// Task sorting buttons
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    const sortType = e.target.getAttribute('data-sort');
+    currentTaskSort = sortType;
+
+    // Update active state
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+
+    // Re-render tasks with new sort
+    renderTasks();
+  });
+});
 
 // Initialize
 async function init() {

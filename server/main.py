@@ -507,6 +507,10 @@ async def get_stats(username: str = Depends(require_auth)):
         cursor = conn.execute("SELECT COUNT(*) as count FROM tasks WHERE completed = 0")
         incomplete_tasks = cursor.fetchone()["count"]
 
+        # Completed tasks
+        cursor = conn.execute("SELECT COUNT(*) as count FROM tasks WHERE completed = 1")
+        completed_tasks = cursor.fetchone()["count"]
+
         # Tasks due within 7 days
         seven_days_later = (datetime.now() + timedelta(days=7)).isoformat()
         cursor = conn.execute("""
@@ -561,6 +565,7 @@ async def get_stats(username: str = Depends(require_auth)):
             "total_salons": total_salons,
             "total_tasks": total_tasks,
             "incomplete_tasks": incomplete_tasks,
+            "completed_tasks": completed_tasks,
             "upcoming_deadlines": upcoming_deadlines,
             "urgent_tasks": urgent_tasks,
             "salons": salon_stats

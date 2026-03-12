@@ -225,6 +225,38 @@
         font-size: 13px;
       }
 
+      /* Task sorting */
+      .task-sort {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      .sort-btn {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+
+      .sort-btn:hover {
+        background: rgba(15, 122, 117, 0.1);
+        border-color: var(--accent);
+      }
+
+      .sort-btn.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+      }
+
       /* Task List */
       .task-list {
         display: flex;
@@ -603,6 +635,12 @@
           <button id="editSalonBtn" class="secondary">Éditer le salon</button>
         </div>
       </header>
+
+      <div class="task-sort">
+        <button class="sort-btn active" data-sort="default">Par défaut</button>
+        <button class="sort-btn" data-sort="deadline">Par échéance</button>
+        <button class="sort-btn" data-sort="priority">Par priorité</button>
+      </div>
 
       <div id="tasksList" class="task-list"></div>
     </div>
