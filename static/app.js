@@ -239,19 +239,23 @@ function renderTasks() {
         <div class="task-header">
           <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''}
                  onchange="toggleTaskComplete(${task.id}, this.checked)">
-          <div class="task-content">
-            <div class="task-name ${task.completed ? 'completed' : ''}" onclick="showTaskFormPage(${task.id})" style="cursor: pointer;">
-              ${task.name}
-            </div>
-            ${task.description ? `<div style="color: var(--muted); font-size: 13px; margin-top: 4px;">${task.description}</div>` : ''}
-            ${task.urls ? `<div style="margin-top: 8px; font-size: 12px;">
-              ${task.urls.split('\n').filter(u => u.trim()).map(url =>
-                `<a href="${url.trim()}" target="_blank" style="color: var(--accent); margin-right: 12px;">${url.trim()}</a>`
-              ).join('')}
-            </div>` : ''}
-            <div class="task-meta">
-              <span class="priority-badge priority-${task.priority}">Priorité ${task.priority}</span>
-              ${task.deadline ? `<span class="deadline-badge">${formatDeadline(task.deadline)}</span>` : ''}
+          <div class="task-content" style="flex: 1; min-width: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <div class="task-name ${task.completed ? 'completed' : ''}" onclick="showTaskFormPage(${task.id})" style="cursor: pointer;">
+                  ${task.name}
+                </div>
+                ${task.description ? `<div style="color: var(--muted); font-size: 13px; margin-top: 6px;">${task.description}</div>` : ''}
+                ${task.urls ? `<div style="margin-top: 8px; font-size: 12px; word-break: break-all;">
+                  ${task.urls.split('\n').filter(u => u.trim()).map(url =>
+                    `<a href="${url.trim()}" target="_blank" style="color: var(--accent); margin-right: 12px; display: inline-block; margin-bottom: 4px;">${url.trim()}</a>`
+                  ).join('')}
+                </div>` : ''}
+              </div>
+              <div class="task-meta" style="flex-shrink: 0;">
+                <span class="priority-badge priority-${task.priority}">Priorité ${task.priority}</span>
+                ${task.deadline ? `<span class="deadline-badge" style="display: block; margin-top: 4px; white-space: nowrap;">${formatDeadline(task.deadline)}</span>` : ''}
+              </div>
             </div>
           </div>
         </div>
